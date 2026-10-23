@@ -1,0 +1,22 @@
+# Build
+bin/
+obj/
+artifacts/
+*.nupkg
+*.snupkg
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Tests and benchmarks
+TestResults/
+BenchmarkDotNet.Artifacts/
+coverage*/
+
+# OS
+.DS_Store
+Thumbs.db
