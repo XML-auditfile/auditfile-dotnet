@@ -29,7 +29,7 @@ jobs:
     env:
       VERSION: ${{ inputs.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0 # all tags, for the version check
 
@@ -41,7 +41,7 @@ jobs:
           $isLatest = Assert-ReleaseVersion $env:VERSION $env:GITHUB_REF @(git tag --list)
           "latest=$($isLatest.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
