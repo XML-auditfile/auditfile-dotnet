@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    Every package in src/ must run under Native AOT and in the browser (WebAssembly).
+    The analyzers need a modern target framework; netstandard2.0 shares the same code and is covered by the net10.0 build.
+  -->
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+    <!-- Implies IsTrimmable plus the trim, single-file and AOT analyzers. -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <!-- Platform compatibility analyzer (CA1416): flags APIs that are unsupported in the browser. -->
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+</Project>

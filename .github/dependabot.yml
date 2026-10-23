@@ -1,0 +1,21 @@
+# auditfile-spec is not a package; .github/workflows/spec-update.yml keeps spec.lock.json up to date.
+version: 2
+updates:
+  # Central package versions in Directory.Packages.props.
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      test:
+        patterns: ["Microsoft.NET.Test.Sdk", "xunit*"]
+      benchmarks:
+        patterns: ["BenchmarkDotNet*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

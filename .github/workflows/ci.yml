@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Fetch auditfile-spec (spec.lock.json)
+        shell: pwsh
+        run: ./tools/fetch-spec.ps1
+
+      - name: Build
+        run: dotnet build XmlAuditfile.Auditfile.slnx -c Release
+
+      - name: Test
+        run: dotnet test XmlAuditfile.Auditfile.slnx -c Release --no-build

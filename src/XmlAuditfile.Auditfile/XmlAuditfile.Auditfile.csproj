@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <PackageId>XmlAuditfile.Auditfile</PackageId>
+    <Description>Streaming reader for Dutch tax audit files (XAF and related), following auditfile-spec.</Description>
+  </PropertyGroup>
+
+  <!-- No package dependencies on any target. AOT and browser readiness: src/Directory.Build.targets. -->
+
+  <!-- Everything in auditfile-spec/generated/ is embedded. Version objects live in Definitions/. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(SpecRoot)generated\**\*.json;$(SpecRoot)generated\**\*.xsd"
+                      LogicalName="$([System.String]::Copy('%(RecursiveDir)').Replace('\','/'))%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Without the spec the package would build but contain no definitions. -->
+  <Target Name="CheckSpec" BeforeTargets="BeforeBuild" Condition="!Exists('$(SpecRoot)generated\registry.json')">
+    <Error Text="auditfile-spec not found in '$(SpecRoot)'. Run: pwsh tools/fetch-spec.ps1" />
+  </Target>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="XmlAuditfile.Auditfile.Tests" />
+  </ItemGroup>
+
+</Project>

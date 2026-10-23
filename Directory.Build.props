@@ -1,0 +1,33 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- These analyzers suggest APIs that do not exist on netstandard2.0; one code path for all targets wins. -->
+    <NoWarn>$(NoWarn);CA1846;CA1847;CA1865;CA1866;CA1867;CA1872;CA2249</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Location of auditfile-spec: spec/, fetched from GitHub by tools/fetch-spec.ps1 as pinned in spec.lock.json.
+    Not committed. Override with -p:SpecRoot=<path>/ to build against a local checkout.
+  -->
+  <PropertyGroup>
+    <SpecRoot Condition="'$(SpecRoot)' == ''">$(MSBuildThisFileDirectory)spec\</SpecRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version>0.1.0-alpha</Version>
+    <Authors>XML-auditfile</Authors>
+    <Company>XML-auditfile</Company>
+    <Copyright>Copyright 2026 XML-auditfile</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/XML-auditfile/auditfile-dotnet</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

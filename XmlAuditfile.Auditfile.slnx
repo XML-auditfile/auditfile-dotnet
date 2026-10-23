@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/XmlAuditfile.Auditfile/XmlAuditfile.Auditfile.csproj" />
+    <Project Path="src/XmlAuditfile.Auditfile.Memory/XmlAuditfile.Auditfile.Memory.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/XmlAuditfile.Auditfile.Tests/XmlAuditfile.Auditfile.Tests.csproj" />
+    <Project Path="tests/XmlAuditfile.Auditfile.Conformance/XmlAuditfile.Auditfile.Conformance.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/ReadToMemory/ReadToMemory.csproj" />
+    <Project Path="samples/Validate/Validate.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/XmlAuditfile.Auditfile.Benchmarks/XmlAuditfile.Auditfile.Benchmarks.csproj" />
+  </Folder>
+</Solution>
