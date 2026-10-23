@@ -132,6 +132,7 @@ To build against a local spec checkout instead: `dotnet build -p:SpecRoot=../aud
 | `ci.yml` | Push to main and pull requests: fetch the pinned spec, build, test |
 | `release.yml` | Manual, with a version such as `1.0.1`. From `main` the version must be higher than every release; from `release/X.Y` (maintenance of an older line, e.g. a security fix `0.1.1` after `1.0.0`, branched off tag `0.1.0`) it must be in line X.Y and higher than the latest release in that line. Then it fetches the pinned spec, builds, tests, packs, creates the tag and GitHub release, and pushes to NuGet when the `NUGET_API_KEY` secret is set |
 | `spec-update.yml` | Weekly: when auditfile-spec has a higher release than `spec.lock.json`, updates the lock, builds and tests, and opens a pull request with the result |
+| `sonarqube.yml` | Manual only: build, test with coverage and analyze in SonarQube Cloud (`SONAR_TOKEN` secret) |
 | `dependabot.yml` | Weekly updates of NuGet packages and GitHub Actions |
 
 ## License
