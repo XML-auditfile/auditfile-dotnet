@@ -17,6 +17,7 @@ public sealed partial class AuditfileVersion
     private readonly Lazy<AuditfileManifest> _manifest;
     private readonly Lazy<IReadOnlyDictionary<string, ElementDefinition>> _definitions;
     private readonly Lazy<IReadOnlyList<Dialect>> _dialects;
+    private readonly Lazy<IReadOnlyList<ViewDefinition>> _views;
 
     private AuditfileVersion(JsonObject json)
     {
@@ -35,6 +36,7 @@ public sealed partial class AuditfileVersion
         _manifest = new(() => new AuditfileManifest(ReadJson("manifest.json")));
         _definitions = new(() => LoadDefinitions());
         _dialects = new(() => ReadJson("dialects.json").Objects("dialects").Select(d => new Dialect(d)).ToList());
+        _views = new(() => ViewDefinition.Load(Type));
     }
 
     /// <summary>All versions this reader knows, in registry order.</summary>
@@ -78,6 +80,12 @@ public sealed partial class AuditfileVersion
 
     /// <summary>Known dialects of this version.</summary>
     public IReadOnlyList<Dialect> Dialects => _dialects.Value;
+
+    /// <summary>Views of this audit file type, e.g. the trial balance. Shared by all versions of the type; see <see cref="ViewResult.IsAvailable"/>.</summary>
+    public IReadOnlyList<ViewDefinition> Views => _views.Value;
+
+    /// <summary>Finds a view by name, or returns null.</summary>
+    public ViewDefinition? FindView(string name) => Views.FirstOrDefault(v => v.Name == name);
 
     /// <summary>Finds a version by key, e.g. "xaf/3.2". Returns null when unknown.</summary>
     public static AuditfileVersion? Find(string key) =>

@@ -34,7 +34,7 @@ public sealed class Diagnostic
     /// <summary>Code, e.g. "XAF-R001".</summary>
     public string Code { get; }
 
-    /// <summary>"xml", "version", "structure", "xsd", "rules" or "dialect".</summary>
+    /// <summary>"xml", "version", "structure", "xsd", "rules", "dialect" or "view".</summary>
     public string Layer { get; }
 
     /// <summary>Severity.</summary>
