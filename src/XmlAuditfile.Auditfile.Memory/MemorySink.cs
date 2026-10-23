@@ -1,3 +1,5 @@
+using XmlAuditfile.Auditfile.Definitions;
+
 namespace XmlAuditfile.Auditfile.Memory;
 
 /// <summary>Keeps all rows in memory, per table. Useful for tests, small files and the browser.</summary>
@@ -20,6 +22,11 @@ public sealed class MemorySink : ISink
     /// <summary>Rows of a table; empty when the table has no rows.</summary>
     public IReadOnlyList<AuditfileRow> Rows(string table) =>
         _tables.TryGetValue(table, out var rows) ? rows : (IReadOnlyList<AuditfileRow>)Array.Empty<AuditfileRow>();
+
+    /// <summary>Runs a view, e.g. <c>sink.Run(sink.Schema!.Version!.FindView("trial_balance")!)</c>, over the rows in memory.</summary>
+    /// <exception cref="InvalidOperationException">Nothing has been read yet.</exception>
+    public ViewResult Run(ViewDefinition view, IReadOnlyDictionary<string, object?>? parameters = null, TextLanguage language = TextLanguage.Dutch) =>
+        view.Run(Schema ?? throw new InvalidOperationException("Read an audit file into this sink first."), Rows, parameters, language);
 
     /// <inheritdoc />
     public Task BeginAsync(ImportContext context, CancellationToken cancellationToken)
