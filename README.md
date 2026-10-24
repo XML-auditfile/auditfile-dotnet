@@ -4,7 +4,7 @@ Streaming reader for Dutch tax audit files (XAF and related), following
 [auditfile-spec](https://github.com/XML-auditfile/auditfile-spec).
 
 > Status: draft (0.x).
-> Not affiliated with the Belastingdienst, SRA or any software vendor.
+> Not affiliated with the Belastingdienst or any software vendor.
 
 ## Packages
 
