@@ -63,9 +63,21 @@ internal sealed class ReferenceChecker : IRowObserver
             foreach (var reference in references)
             {
                 var value = Composite(row, reference.Columns);
-                if (value is not null && !reference.Key.Values.Contains(value) && reference.Pending.Count < MaxPendingPerReference)
+                if (value is null || reference.Key.Values.Contains(value) || reference.Pending.Contains(value))
+                {
+                    continue;
+                }
+
+                if (reference.Pending.Count < MaxPendingPerReference)
                 {
                     reference.Pending.Add(value);
+                }
+                else if (!reference.Overflowed)
+                {
+                    // From here on new values are not checked; say so once, so a clean result is not mistaken for a complete one.
+                    reference.Overflowed = true;
+                    _diagnostics.Add("XAF-R017", new Location(row.Part, null, null, row.Table.Path),
+                        ("table", row.Table.Name), ("column", reference.ColumnNames), ("target", reference.Key.Table.Name), ("max", MaxPendingPerReference));
                 }
             }
         }
@@ -142,5 +154,8 @@ internal sealed class ReferenceChecker : IRowObserver
         public KeyState Key { get; } = key;
 
         public HashSet<string> Pending { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>True once the pending limit was reached and XAF-R017 was reported.</summary>
+        public bool Overflowed { get; set; }
     }
 }
