@@ -82,9 +82,9 @@ jobs:
         shell: pwsh
         run: |
           ./tools/fetch-spec.ps1
-          dotnet build XmlAuditfile.Auditfile.slnx -c Release
+          dotnet build XmlAuditfile.slnx -c Release
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          dotnet test --solution XmlAuditfile.Auditfile.slnx -c Release --no-build
+          dotnet test --solution XmlAuditfile.slnx -c Release --no-build
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Open pull request

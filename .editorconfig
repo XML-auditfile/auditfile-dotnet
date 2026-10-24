@@ -27,3 +27,8 @@ dotnet_style_readonly_field = true:warning
 dotnet_diagnostic.CA2000.severity = warning
 dotnet_code_quality.CA2000.dispose_ownership_transfer_at_constructor = true
 dotnet_code_quality.CA2000.dispose_ownership_transfer_at_method_call = true
+
+# Public types a caller needs every day live in the root namespace (XmlAuditfile), whatever their folder;
+# the rest of the public API lives in XmlAuditfile.Definitions. Folders only group the source.
+[src/**.cs]
+dotnet_style_namespace_match_folder = false

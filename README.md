@@ -10,14 +10,14 @@ Streaming reader for Dutch tax audit files (XAF and related), following
 
 | Package | Contents |
 | ------- | -------- |
-| `XmlAuditfile.Auditfile` | The reader: version resolution, validation, `ISink`, row streaming. No dependencies. |
-| `XmlAuditfile.Auditfile.Memory` | `MemorySink`: keeps all rows per table in memory. Depends on the reader. |
+| `XmlAuditfile` | The reader: version resolution, validation, `ISink`, row streaming. No dependencies. |
+| `XmlAuditfile.Memory` | `MemorySink`: keeps all rows per table in memory. Depends on the reader. |
 
 Write your own `ISink` to load into a database or anything else; only the reader package is needed then.
 
 ```csharp
-using XmlAuditfile.Auditfile;
-using XmlAuditfile.Auditfile.Memory;
+using XmlAuditfile;
+using XmlAuditfile.Memory;
 
 var sink = new MemorySink();
 var source = AuditfileSource.FromFactory(() => File.OpenRead("administratie.xaf"), "administratie.xaf");
@@ -30,9 +30,16 @@ foreach (var diagnostic in report.Diagnostics)
 
 foreach (var line in sink.Rows("tr_line"))
 {
-    Console.WriteLine($"{line["acc_id"]} {line["amnt"]} {line["amnt_tp"]}");
+    Console.WriteLine($"{line.GetString("acc_id")} {line.GetDecimal("amnt")} {line.GetString("amnt_tp")}");
 }
 ```
+
+Rows have typed accessors (`GetString`, `GetDecimal`, `GetInteger`, `GetDate`, `GetDateTime`, `GetTime`, `GetBoolean`) that check
+the column type and name the problem; `TryGetValue` tells whether a column exists in this version. `GetDecimal` also reads an
+integer column, since a column can be integer in one version and decimal in another. In a loop over many rows, look the
+column up once (`table.FindColumn("amnt")`) and pass the `SchemaColumn`: no lookup by name per row.
+
+Values are read in XSD notation only: a date-time such as `03/01/2017 10:00:00` is refused (XAF-S004) rather than guessed.
 
 ## What it does
 
@@ -52,9 +59,14 @@ foreach (var line in sink.Rows("tr_line"))
 | Call | Use |
 | ---- | --- |
 | `Auditfile.ReadAsync(source, sink, options)` | Read into a sink: `MemorySink` (Memory package) or your own `ISink` |
-| `Auditfile.ValidateAsync(source, options)` | Validate completely without storing anything |
+| `Auditfile.ValidateAsync(source, options)` | Validate without storing anything; `Mode = Unverified` skips the XSD |
 | `Auditfile.Scan(source, options)` | Version, XSD validation and row counts only |
-| `Auditfile.Open(source, options).ReadRows()` | Stream rows yourself |
+| `Auditfile.Open(source, options).ReadRows()` | Stream rows yourself; the rows can be enumerated once |
+
+Every call takes a `CancellationToken`, checked in the scan phase as well as the load phase.
+`ReadOptions` refuses values out of range (`BatchSize`, `MaxDiagnostics`, `MaxDepth`, `MaxValueLength` at least 1)
+with an `ArgumentOutOfRangeException`. When a sink fails and its `AbortAsync` fails too, the read throws an
+`AggregateException` with both errors.
 | `AuditfileVersion.Financial.V3_2` | Manifest, XSD, definitions and dialects of a version |
 | `AuditfileSchema.ToJson()` / `FromJson()` | Store and restore the schema of an import |
 
@@ -82,6 +94,29 @@ Example programs live in [auditfile-dotnet-samples](https://github.com/XML-audit
 asynchronous only, so copy the file into memory first and use
 `AuditfileSource.FromFactory(() => new MemoryStream(bytes))`.
 
+**Web applications**: the XML is parsed synchronously; only the sink is called asynchronously. Parsing is CPU-bound,
+and asynchronous reads per node would only slow it down. ASP.NET Core does not allow synchronous reads of the request
+body, so do not pass `Request.Body` to `FromStream`: copy the upload to a temporary file and read that. A large file keeps a
+thread busy while it is read, so run big imports in a background job rather than in the request.
+
+```csharp
+var path = Path.GetTempFileName();
+try
+{
+    await using (var file = File.Create(path))
+    {
+        await upload.CopyToAsync(file, cancellationToken); // upload: IFormFile
+    }
+
+    var report = await Auditfile.ValidateAsync(
+        AuditfileSource.FromFactory(() => File.OpenRead(path), upload.FileName), cancellationToken: cancellationToken);
+}
+finally
+{
+    File.Delete(path);
+}
+```
+
 ## Performance
 
 Measured on a synthetic XAF 3.2 file (`Benchmarks/` in [auditfile-dotnet-samples](https://github.com/XML-auditfile/auditfile-dotnet-samples)), single core:
@@ -91,15 +126,38 @@ Measured on a synthetic XAF 3.2 file (`Benchmarks/` in [auditfile-dotnet-samples
 | 92 MB | 750,000 | 5.6 s | 9.6 s | 146 MB |
 | 183 MB | 1,500,000 | 7.0 s | – | 146 MB |
 
-Memory does not grow with the file: only open elements, key values and unresolved references are kept.
+Memory grows with the number of keys (accounts, customers and suppliers, journals, ...), not with the number of lines:
+the reader keeps the open elements, the key values, the unresolved references (at most 100,000 per reference,
+XAF-R017 beyond that) and the totals of transactions whose lines are still being read.
+
+## Diagnostics
+
+Every finding is a diagnostic with a stable code from `diagnostics.json` of auditfile-spec. The report lists at most
+`MaxDiagnostics` (default 1000), followed by XAF-X900 when more were found. A full list makes room for errors by
+leaving out infos and warnings, and fatal diagnostics are always included. `IsValid`, `HasErrors`, `HasFatal` and
+`Count(severity)` count every diagnostic, also the ones left out; `IsTruncated` says whether some were.
+
+| Layer | Codes this reader reports |
+| ----- | ------------------------- |
+| XML | X001–X004 (X004 also for a part of a split file in another encoding than the first part), X900 |
+| Version | V001–V006 |
+| Structure | S001–S005, S008; S006 in unverified mode (in verified mode the XSD reports a missing field as D001) |
+| XSD | D001, D002 |
+| Rules | R001–R004, R017 |
+| Dialect | C001–C003, when a dialect applies |
+| Views | Q001, Q002 |
+
+Defined in the spec but not checked yet: S007 and S009 (in verified mode the XSD reports too many occurrences and
+values outside a code list as D001), R005–R016 (ascending numbers, periods, eleven test, IBAN, personal data),
+X005 (the XML parser reports an invalid character as X001) and E001–E004 (envelopes).
 
 ## Layout
 
 | Path | Contents |
 | ---- | -------- |
-| `src/XmlAuditfile.Auditfile/` | The reader |
-| `src/XmlAuditfile.Auditfile.Memory/` | `MemorySink` |
-| `tests/XmlAuditfile.Auditfile.Tests/` | Unit tests, using the XAF 3.2 sample in `Data/xaf-3.2-sample.xaf` (two intended findings: XAF-R001, XAF-R003) |
+| `src/XmlAuditfile/` | The reader |
+| `src/XmlAuditfile.Memory/` | `MemorySink` |
+| `tests/XmlAuditfile.Tests/` | Unit tests, using the XAF 3.2 sample in `Data/xaf-3.2-sample.xaf` (two intended findings: XAF-R001, XAF-R003) |
 | `spec.lock.json` | The pinned auditfile-spec release |
 | `tools/` | `fetch-spec.ps1` and the semver helpers used by the workflows |
 
@@ -115,8 +173,8 @@ The spec is not committed. `spec.lock.json` pins a release (tag and commit) of
 
 ```
 pwsh tools/fetch-spec.ps1        # after cloning and whenever spec.lock.json changes
-dotnet build XmlAuditfile.Auditfile.slnx
-dotnet test --solution XmlAuditfile.Auditfile.slnx
+dotnet build XmlAuditfile.slnx
+dotnet test --solution XmlAuditfile.slnx
 ```
 
 To build against a local spec checkout instead: `dotnet build -p:SpecRoot=../auditfile-spec/`.
@@ -128,7 +186,6 @@ To build against a local spec checkout instead: `dotnet build -p:SpecRoot=../aud
 | `ci.yml` | Push to main and pull requests: fetch the pinned spec, build, test |
 | `release.yml` | Manual, with a version such as `1.0.1`. From `main` the version must be higher than every release; from `release/X.Y` (maintenance of an older line, e.g. a security fix `0.1.1` after `1.0.0`, branched off tag `0.1.0`) it must be in line X.Y and higher than the latest release in that line. Then it fetches the pinned spec, builds, tests, packs, creates the tag and GitHub release, and pushes to NuGet when the `NUGET_API_KEY` secret is set |
 | `spec-update.yml` | Weekly: when auditfile-spec has a higher release than `spec.lock.json`, updates the lock, builds and tests, and opens a pull request with the result |
-| `sonarqube.yml` | Manual only: build, test with coverage and analyze in SonarQube Cloud (`SONAR_TOKEN` secret) |
 | `dependabot.yml` | Weekly updates of NuGet packages and GitHub Actions |
 
 ## License

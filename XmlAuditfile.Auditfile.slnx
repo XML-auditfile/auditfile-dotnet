@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/XmlAuditfile.Auditfile/XmlAuditfile.Auditfile.csproj" />
-    <Project Path="src/XmlAuditfile.Auditfile.Memory/XmlAuditfile.Auditfile.Memory.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/XmlAuditfile.Auditfile.Tests/XmlAuditfile.Auditfile.Tests.csproj" />
-  </Folder>
-</Solution>
