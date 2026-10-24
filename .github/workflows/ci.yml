@@ -23,7 +23,7 @@ jobs:
         run: ./tools/fetch-spec.ps1
 
       - name: Build
-        run: dotnet build XmlAuditfile.Auditfile.slnx -c Release
+        run: dotnet build XmlAuditfile.slnx -c Release
 
       - name: Test
-        run: dotnet test XmlAuditfile.Auditfile.slnx -c Release --no-build
+        run: dotnet test --solution XmlAuditfile.slnx -c Release --no-build

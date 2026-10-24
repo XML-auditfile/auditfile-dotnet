@@ -1,0 +1,39 @@
+<Project>
+
+  <!-- The settings of the repository root, then what only the packages in src/ need. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Package metadata shown on nuget.org. -->
+  <PropertyGroup>
+    <PackageProjectUrl>https://github.com/XML-auditfile/auditfile-dotnet</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>xaf;auditfile;auditfile-financieel;xml-auditfile;belastingdienst;audit;accounting;xml</PackageTags>
+    <PackageReleaseNotes>https://github.com/XML-auditfile/auditfile-dotnet/blob/main/CHANGELOG.md</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <!-- IntelliSense: the XML documentation of every public member ships in the package. -->
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!--
+    Debugging into the package: Source Link (built into the SDK) points the PDB at the exact commit on GitHub,
+    and the PDB ships as a symbol package (.snupkg) that nuget.org serves from its symbol server.
+  -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <!-- Checks at pack time that the netstandard2.0 and net10.0 builds expose the same public API. -->
+  <PropertyGroup>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

@@ -12,9 +12,8 @@ artifacts/
 *.user
 *.suo
 
-# Tests and benchmarks
+# Tests
 TestResults/
-BenchmarkDotNet.Artifacts/
 coverage*/
 
 # OS

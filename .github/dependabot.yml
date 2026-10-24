@@ -8,9 +8,7 @@ updates:
       interval: weekly
     groups:
       test:
-        patterns: ["Microsoft.NET.Test.Sdk", "xunit*"]
-      benchmarks:
-        patterns: ["BenchmarkDotNet*"]
+        patterns: ["xunit*"]
 
   - package-ecosystem: github-actions
     directory: /

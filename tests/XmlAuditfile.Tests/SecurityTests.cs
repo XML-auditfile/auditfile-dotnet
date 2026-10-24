@@ -1,0 +1,39 @@
+using Xunit;
+
+namespace XmlAuditfile.Tests;
+
+public class SecurityTests
+{
+    [Fact]
+    public void DocumentTypeDefinitionsAreRefused()
+    {
+        var root = TestFiles.SampleText[TestFiles.SampleText.IndexOf("<auditfile", StringComparison.Ordinal)..];
+        var path = TestFiles.Write("dtd.xaf", "<?xml version=\"1.0\"?><!DOCTYPE a [<!ENTITY x SYSTEM \"file:///etc/passwd\">]>" + root);
+
+        var report = Auditfile.Scan(TestFiles.Source(path), null, TestContext.Current.CancellationToken);
+
+        Assert.Contains(report.Diagnostics, d => d.Code == "XAF-X001");
+        Assert.Null(report.Schema);
+    }
+
+    [Fact]
+    public void TruncatedFilesStopWithAFatalDiagnostic()
+    {
+        var path = TestFiles.Write("broken.xaf", TestFiles.SampleText[..(TestFiles.SampleText.Length / 2)]);
+
+        var report = Auditfile.Scan(TestFiles.Source(path), null, TestContext.Current.CancellationToken);
+
+        Assert.Contains(report.Diagnostics, d => d.Code == "XAF-X001" && d.Line > 0);
+    }
+
+    [Fact]
+    public void ExcessiveNestingIsRefused()
+    {
+        var deep = string.Concat(Enumerable.Repeat("<x>", 100)) + string.Concat(Enumerable.Repeat("</x>", 100));
+        var path = TestFiles.Write("deep.xaf", TestFiles.SampleText.Replace("<header>", "<header>" + deep, StringComparison.Ordinal));
+
+        var report = Auditfile.Scan(TestFiles.Source(path), new ReadOptions { Mode = ReadMode.Unverified }, TestContext.Current.CancellationToken);
+
+        Assert.Contains(report.Diagnostics, d => d.Code == "XAF-X003");
+    }
+}
