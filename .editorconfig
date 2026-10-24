@@ -21,5 +21,9 @@ dotnet_sort_system_directives_first = true
 csharp_prefer_braces = true:warning
 dotnet_style_readonly_field = true:warning
 
+# Every stream opened by the reader must be closed on all paths, also on errors (a file opened by a factory stays locked otherwise).
+# Ownership passes to a wrapper constructor (PeekableStream, XmlReader) or to the method that receives the stream (CreateReader).
 [src/**.cs]
 dotnet_diagnostic.CA2000.severity = warning
+dotnet_code_quality.CA2000.dispose_ownership_transfer_at_constructor = true
+dotnet_code_quality.CA2000.dispose_ownership_transfer_at_method_call = true

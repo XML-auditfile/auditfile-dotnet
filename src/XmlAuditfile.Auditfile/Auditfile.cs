@@ -66,6 +66,7 @@ public static class Auditfile
         }
         catch
         {
+            session.ReleasePending();
             await sink.AbortAsync(session.CreateReport(loaded: false), CancellationToken.None).ConfigureAwait(false);
             throw;
         }

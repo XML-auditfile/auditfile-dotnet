@@ -73,7 +73,20 @@ internal sealed class ReadSession
         }
 
         Schema = AuditfileSchema.Create(Resolution!.Version, Resolution.FileNamespace, Resolution.Source, Resolution.Dialect?.Name, rowCounts: null);
+        if (scanOnly)
+        {
+            ReleasePending();
+        }
+
         return !scanOnly;
+    }
+
+    /// <summary>Releases the streams kept for a load that will not happen (scan only, or the import failed before loading).</summary>
+    public void ReleasePending()
+    {
+        _pendingPeek?.Dispose();
+        _pendingPeek = null;
+        _pendingStream = null;
     }
 
     /// <summary>The load phase as a stream of rows. Diagnostics are collected along the way.</summary>
@@ -196,51 +209,67 @@ internal sealed class ReadSession
         }
     }
 
-    /// <summary>Builds the reader stack: parts → peek for the version → namespace mapping → XSD validation.</summary>
+    /// <summary>
+    /// Builds the reader stack: parts → peek for the version → namespace mapping → XSD validation.
+    /// Takes ownership of the streams: the returned reader closes them, and on null or an exception they are closed here,
+    /// so a file opened by a factory is never left locked.
+    /// </summary>
     private XmlReader? CreateReader(ConcatenatedStream concatenated, bool validate, PeekableStream? peeked = null)
     {
-        var peekable = peeked ?? new PeekableStream(concatenated);
-        if (Resolution is null && !ResolveFrom(peekable))
-        {
-            peekable.Dispose();
-            return null;
-        }
-
-        peekable.Rewind();
-        XmlReader reader = XmlReader.Create(peekable, BaseSettings(closeInput: true));
-        if (Resolution!.NeedsMapping)
-        {
-            reader = new NamespaceMappingReader(reader, Resolution.FileNamespace, Resolution.Version.Namespace);
-        }
-
-        if (!validate)
-        {
-            return reader;
-        }
-
-        XmlSchemaSet schemas;
+        Stream? owned = peeked ?? (Stream)concatenated;
+        XmlReader? reader = null;
         try
         {
-            schemas = LoadSchemaSet();
-        }
-        catch (Exception ex) when (ex is XmlSchemaException or XmlException || IsSourceError(ex))
-        {
-            // Only a custom XSD can fail here; the embedded ones are checked by the tests.
-            Diagnostics.Add("XAF-X002", Location.None, ("part", "XSD"), ("detail", ex.Message));
-            reader.Dispose();
-            return null;
-        }
+            var peekable = peeked ?? new PeekableStream(concatenated);
+            owned = peekable;
+            if (Resolution is null && !ResolveFrom(peekable))
+            {
+                return null;
+            }
 
-        var settings = BaseSettings(closeInput: true);
-        settings.ValidationType = ValidationType.Schema;
-        settings.Schemas = schemas;
-        settings.ValidationEventHandler += (_, e) =>
-        {
-            var line = e.Exception?.LineNumber ?? 0;
-            Diagnostics.Add("XAF-D001", new Location(PartOf(line, concatenated), line, e.Exception?.LinePosition, null), ("detail", e.Message));
-        };
+            peekable.Rewind();
+            reader = XmlReader.Create(peekable, BaseSettings(closeInput: true));
+            owned = null;
+            if (Resolution!.NeedsMapping)
+            {
+                reader = new NamespaceMappingReader(reader, Resolution.FileNamespace, Resolution.Version.Namespace);
+            }
 
-        return XmlReader.Create(reader, settings);
+            if (validate)
+            {
+                XmlSchemaSet schemas;
+                try
+                {
+                    schemas = LoadSchemaSet();
+                }
+                catch (Exception ex) when (ex is XmlSchemaException or XmlException || IsSourceError(ex))
+                {
+                    // Only a custom XSD can fail here; the embedded ones are checked by the tests.
+                    Diagnostics.Add("XAF-X002", Location.None, ("part", "XSD"), ("detail", ex.Message));
+                    return null;
+                }
+
+                var settings = BaseSettings(closeInput: true);
+                settings.ValidationType = ValidationType.Schema;
+                settings.Schemas = schemas;
+                settings.ValidationEventHandler += (_, e) =>
+                {
+                    var line = e.Exception?.LineNumber ?? 0;
+                    Diagnostics.Add("XAF-D001", new Location(PartOf(line, concatenated), line, e.Exception?.LinePosition, null), ("detail", e.Message));
+                };
+
+                reader = XmlReader.Create(reader, settings);
+            }
+
+            var result = reader;
+            reader = null;
+            return result;
+        }
+        finally
+        {
+            reader?.Dispose();
+            owned?.Dispose();
+        }
     }
 
     private bool ResolveFromPeek()
@@ -250,17 +279,29 @@ internal sealed class ReadSession
             return true;
         }
 
-        var concatenated = new ConcatenatedStream(_source.Parts, collectStatistics: !_source.CanReadTwice);
-        var peekable = new PeekableStream(concatenated);
-        if (!ResolveFrom(peekable) || _source.CanReadTwice)
+        ConcatenatedStream? concatenated = new(_source.Parts, collectStatistics: !_source.CanReadTwice);
+        PeekableStream? peekable = null;
+        try
         {
-            peekable.Dispose();
-            return Resolution is not null;
-        }
+            peekable = new PeekableStream(concatenated);
+            var stream = concatenated;
+            concatenated = null;
+            if (!ResolveFrom(peekable) || _source.CanReadTwice)
+            {
+                return Resolution is not null;
+            }
 
-        _pendingStream = concatenated;
-        _pendingPeek = peekable;
-        return true;
+            // Kept for loading: a single-use source is opened only once. The session now owns the streams.
+            _pendingStream = stream;
+            _pendingPeek = peekable;
+            peekable = null;
+            return true;
+        }
+        finally
+        {
+            peekable?.Dispose();
+            concatenated?.Dispose();
+        }
     }
 
     private bool ResolveFrom(PeekableStream peekable)
