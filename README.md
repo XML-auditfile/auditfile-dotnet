@@ -116,20 +116,6 @@ finally
     File.Delete(path);
 }
 ```
-
-## Performance
-
-Measured on a synthetic XAF 3.2 file (`Benchmarks/` in [auditfile-dotnet-samples](https://github.com/XML-auditfile/auditfile-dotnet-samples)), single core:
-
-| File | Rows | Unverified | Verified (two passes) | Peak memory |
-| ---- | ---- | ---------- | --------------------- | ----------- |
-| 92 MB | 750,000 | 5.6 s | 9.6 s | 146 MB |
-| 183 MB | 1,500,000 | 7.0 s | – | 146 MB |
-
-Memory grows with the number of keys (accounts, customers and suppliers, journals, ...), not with the number of lines:
-the reader keeps the open elements, the key values, the unresolved references (at most 100,000 per reference,
-XAF-R017 beyond that) and the totals of transactions whose lines are still being read.
-
 ## Diagnostics
 
 Every finding is a diagnostic with a stable code from `diagnostics.json` of auditfile-spec. The report lists at most
