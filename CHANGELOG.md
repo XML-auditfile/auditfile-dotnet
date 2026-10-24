@@ -15,4 +15,4 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - `ISink`, `IAuditfileSource`, `AuditfileSchema` with JSON round-trip.
 - `MemorySink` in the separate package `XmlAuditfile.Auditfile.Memory` (namespace `XmlAuditfile.Auditfile.Memory`).
 - Native AOT compatible on net10.0; no package dependencies.
-- Views from auditfile-spec (`AuditfileVersion.Views`, `ViewDefinition.Run`, `MemorySink.Run`): trial balance, ledger entries and more, with parameters and diagnostics XAF-Q001/Q002. The ReadToMemory sample prints them.
+- Views from auditfile-spec (`AuditfileVersion.Views`, `ViewDefinition.Run`, `MemorySink.Run`): trial balance, ledger entries and more, with parameters and diagnostics XAF-Q001/Q002.

@@ -75,8 +75,8 @@ var source = AuditfileSource.FromFactories(paths.Select(p => (Path.GetFileName(p
 ## Targets
 
 `netstandard2.0` (.NET Framework 4.7.2+) and `net10.0`. No package dependencies on any target.
-On `net10.0` the library is trimming and Native AOT compatible: `samples/ReadToMemory` publishes as a
-single native executable without warnings.
+On `net10.0` the library is trimming and Native AOT compatible; the trim and AOT analyzers run in every build.
+Example programs live in [auditfile-dotnet-samples](https://github.com/XML-auditfile/auditfile-dotnet-samples).
 
 **WebAssembly**: the library uses no file system, threads or reflection; all input comes from your streams. Browser file streams are
 asynchronous only, so copy the file into memory first and use
@@ -99,11 +99,8 @@ Memory does not grow with the file: only open elements, key values and unresolve
 | ---- | -------- |
 | `src/XmlAuditfile.Auditfile/` | The reader |
 | `src/XmlAuditfile.Auditfile.Memory/` | `MemorySink` |
-| `tests/XmlAuditfile.Auditfile.Tests/` | Unit tests, using the official XAF 3.2 test file from auditfile-spec |
-| `tests/XmlAuditfile.Auditfile.Conformance/` | The shared conformance suite (once the cases exist) |
+| `tests/XmlAuditfile.Auditfile.Tests/` | Unit tests, using the XAF 3.2 sample in `Data/xaf-3.2-sample.xaf` (two intended findings: XAF-R001, XAF-R003) |
 | `benchmarks/` | Throughput and allocations (`dotnet run -c Release --project benchmarks/...`) |
-| `samples/ReadToMemory/` | Read a file and print tables, a row with definitions, and diagnostics |
-| `samples/Validate/` | Validate a file; exit code 0 when valid |
 | `spec.lock.json` | The pinned auditfile-spec release |
 | `tools/` | `fetch-spec.ps1` and the semver helpers used by the workflows |
 
@@ -114,8 +111,8 @@ dialects, registry, diagnostics) is embedded in the package. The version objects
 are part of this reader; a test checks that they match the registry.
 
 The spec is not committed. `spec.lock.json` pins a release (tag and commit) of
-[auditfile-spec](https://github.com/XML-auditfile/auditfile-spec), and `tools/fetch-spec.ps1` fetches
-exactly that commit into `spec/` (git-ignored). The build stops with a clear error when `spec/` is missing.
+[auditfile-spec](https://github.com/XML-auditfile/auditfile-spec), and `tools/fetch-spec.ps1` copies only
+`generated/` of that commit into `spec/generated/` (git-ignored; a plain folder, not a git checkout). The build stops with a clear error when `spec/` is missing.
 
 ```
 pwsh tools/fetch-spec.ps1        # after cloning and whenever spec.lock.json changes

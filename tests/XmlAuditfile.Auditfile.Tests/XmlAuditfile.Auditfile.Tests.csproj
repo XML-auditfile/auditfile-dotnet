@@ -17,9 +17,9 @@
     <ProjectReference Include="..\..\src\XmlAuditfile.Auditfile.Memory\XmlAuditfile.Auditfile.Memory.csproj" />
   </ItemGroup>
 
-  <!-- The official XAF 3.2 test file from auditfile-spec; variations are made in code. -->
+  <!-- The XAF 3.2 sample of this repository; variations are made in code. -->
   <ItemGroup>
-    <None Include="$(SpecRoot)sources\xaf\XAF_3.2_20170904\XmlAuditfileFinancieel3.2_test.xml" Link="Data\xaf-3.2-official-test.xml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Data\xaf-3.2-sample.xaf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

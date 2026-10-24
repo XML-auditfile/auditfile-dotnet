@@ -1,13 +1,16 @@
 namespace XmlAuditfile.Auditfile.Tests;
 
-/// <summary>The official XAF 3.2 test file and variations of it, written to a temporary folder.</summary>
+/// <summary>
+/// The XAF 3.2 sample file of this repository (Data/xaf-3.2-sample.xaf) and variations of it, written to a temporary folder.
+/// The sample covers the same tables as the official test file and holds two intended findings: XAF-R001 and XAF-R003.
+/// </summary>
 internal static class TestFiles
 {
     public const string OfficialNamespace = "http://www.auditfiles.nl/XAF/3.2";
 
-    public static string Official { get; } = Path.Combine(AppContext.BaseDirectory, "Data", "xaf-3.2-official-test.xml");
+    public static string Sample { get; } = Path.Combine(AppContext.BaseDirectory, "Data", "xaf-3.2-sample.xaf");
 
-    public static string OfficialText { get; } = File.ReadAllText(Official).Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+    public static string SampleText { get; } = File.ReadAllText(Sample).Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
 
     public static string Write(string name, string content)
     {
@@ -23,5 +26,5 @@ internal static class TestFiles
         AuditfileSource.FromFactory(() => File.OpenRead(path), Path.GetFileName(path));
 
     public static string WithNamespace(string ns) =>
-        Write("namespace.xaf", OfficialText.Replace($"xmlns=\"{OfficialNamespace}\"", $"xmlns=\"{ns}\"", StringComparison.Ordinal));
+        Write("namespace.xaf", SampleText.Replace($"xmlns=\"{OfficialNamespace}\"", $"xmlns=\"{ns}\"", StringComparison.Ordinal));
 }
