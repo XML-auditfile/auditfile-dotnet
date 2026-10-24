@@ -184,6 +184,11 @@ internal sealed class ReadSession
                 Diagnostics.Add("XAF-X001", new Location(PartOf(ex.LineNumber, concatenated), ex.LineNumber, ex.LinePosition, null), ("detail", ex.Message));
                 return;
             }
+            catch (Exception ex) when (IsSourceError(ex))
+            {
+                Diagnostics.Add("XAF-X002", Location.None, ("part", concatenated.CurrentPartName ?? _source.Parts[0].Name), ("detail", ex.Message));
+                return;
+            }
 
             _parts = concatenated.Completed;
             CheckTables(counts);
@@ -213,9 +218,22 @@ internal sealed class ReadSession
             return reader;
         }
 
+        XmlSchemaSet schemas;
+        try
+        {
+            schemas = LoadSchemaSet();
+        }
+        catch (Exception ex) when (ex is XmlSchemaException or XmlException || IsSourceError(ex))
+        {
+            // Only a custom XSD can fail here; the embedded ones are checked by the tests.
+            Diagnostics.Add("XAF-X002", Location.None, ("part", "XSD"), ("detail", ex.Message));
+            reader.Dispose();
+            return null;
+        }
+
         var settings = BaseSettings(closeInput: true);
         settings.ValidationType = ValidationType.Schema;
-        settings.Schemas = LoadSchemaSet();
+        settings.Schemas = schemas;
         settings.ValidationEventHandler += (_, e) =>
         {
             var line = e.Exception?.LineNumber ?? 0;
@@ -270,12 +288,18 @@ internal sealed class ReadSession
             Diagnostics.Add("XAF-X001", new Location(1, ex.LineNumber, ex.LinePosition, null), ("detail", ex.Message));
             return null;
         }
-        catch (IOException ex)
+        catch (Exception ex) when (IsSourceError(ex))
         {
             Diagnostics.Add("XAF-X002", Location.None, ("part", _source.Parts[0].Name), ("detail", ex.Message));
             return null;
         }
     }
+
+    /// <summary>
+    /// A source that cannot be read: an I/O failure, a stream that refuses access, or a root element that never comes.
+    /// These become XAF-X002, so a read always ends in a report. Cancellation and argument errors still throw.
+    /// </summary>
+    internal static bool IsSourceError(Exception ex) => ex is IOException or InvalidDataException or UnauthorizedAccessException;
 
     private XmlSchemaSet LoadSchemaSet()
     {

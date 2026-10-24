@@ -108,6 +108,12 @@ internal sealed class RowLoader
             Stopped = true;
             return false;
         }
+        catch (Exception ex) when (ReadSession.IsSourceError(ex))
+        {
+            _diagnostics.Add("XAF-X002", new Location(null, null, null, CurrentPath), ("part", _stream.CurrentPartName ?? ""), ("detail", ex.Message));
+            Stopped = true;
+            return false;
+        }
     }
 
     private string? CurrentPath => _paths.Count == 0 ? null : _paths[_paths.Count - 1];

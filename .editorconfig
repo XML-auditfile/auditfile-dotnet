@@ -20,3 +20,6 @@ csharp_using_directive_placement = outside_namespace:warning
 dotnet_sort_system_directives_first = true
 csharp_prefer_braces = true:warning
 dotnet_style_readonly_field = true:warning
+
+[src/**.cs]
+dotnet_diagnostic.CA2000.severity = warning

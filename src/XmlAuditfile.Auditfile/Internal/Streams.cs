@@ -67,6 +67,9 @@ internal sealed class ConcatenatedStream : ForwardOnlyStream
     /// <summary>Statistics of the parts read completely so far.</summary>
     public IReadOnlyList<PartInfo> Completed => _completed;
 
+    /// <summary>Name of the part being read, or null before the first part.</summary>
+    public string? CurrentPartName => _index >= 0 && _index < _parts.Count ? _parts[_index].Name : null;
+
     public override int Read(byte[] buffer, int offset, int count)
     {
         while (true)
