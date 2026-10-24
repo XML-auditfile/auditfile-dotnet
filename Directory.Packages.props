@@ -8,7 +8,6 @@
   <ItemGroup>
     <!-- xunit v3 on Microsoft.Testing.Platform (global.json): no test SDK or VSTest adapter needed. -->
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
-    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
 
 </Project>

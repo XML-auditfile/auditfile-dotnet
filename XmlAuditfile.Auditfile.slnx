@@ -6,7 +6,4 @@
   <Folder Name="/tests/">
     <Project Path="tests/XmlAuditfile.Auditfile.Tests/XmlAuditfile.Auditfile.Tests.csproj" />
   </Folder>
-  <Folder Name="/benchmarks/">
-    <Project Path="benchmarks/XmlAuditfile.Auditfile.Benchmarks/XmlAuditfile.Auditfile.Benchmarks.csproj" />
-  </Folder>
 </Solution>

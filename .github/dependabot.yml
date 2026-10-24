@@ -9,8 +9,6 @@ updates:
     groups:
       test:
         patterns: ["xunit*"]
-      benchmarks:
-        patterns: ["BenchmarkDotNet*"]
 
   - package-ecosystem: github-actions
     directory: /

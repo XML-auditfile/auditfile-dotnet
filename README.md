@@ -84,7 +84,7 @@ asynchronous only, so copy the file into memory first and use
 
 ## Performance
 
-Measured on a synthetic XAF 3.2 file (`benchmarks/`), single core:
+Measured on a synthetic XAF 3.2 file (`Benchmarks/` in [auditfile-dotnet-samples](https://github.com/XML-auditfile/auditfile-dotnet-samples)), single core:
 
 | File | Rows | Unverified | Verified (two passes) | Peak memory |
 | ---- | ---- | ---------- | --------------------- | ----------- |
@@ -100,7 +100,6 @@ Memory does not grow with the file: only open elements, key values and unresolve
 | `src/XmlAuditfile.Auditfile/` | The reader |
 | `src/XmlAuditfile.Auditfile.Memory/` | `MemorySink` |
 | `tests/XmlAuditfile.Auditfile.Tests/` | Unit tests, using the XAF 3.2 sample in `Data/xaf-3.2-sample.xaf` (two intended findings: XAF-R001, XAF-R003) |
-| `benchmarks/` | Throughput and allocations (`dotnet run -c Release --project benchmarks/...`) |
 | `spec.lock.json` | The pinned auditfile-spec release |
 | `tools/` | `fetch-spec.ps1` and the semver helpers used by the workflows |
 
