@@ -6,7 +6,12 @@ name: Release
 #   the version must be in line X.Y and higher than the latest release in that line.
 #   Branch release/X.Y off the tag of that line, e.g. git switch -c release/0.1 0.1.0.
 # Checks the version, fetches the auditfile-spec pinned in spec.lock.json, builds, tests, packs,
-# creates the tag and GitHub release, and publishes to NuGet when the NUGET_API_KEY secret is set.
+# creates the tag and GitHub release, and publishes to NuGet when the NUGET_USER variable is set.
+#
+# Publishing uses NuGet Trusted Publishing: no API key is stored. GitHub gives this job an OIDC token, and nuget.org
+# exchanges it for a key that is valid for one hour, but only for this repository, this workflow file and the
+# environment "nuget" (the trusted publishing policy on nuget.org). NUGET_USER is the nuget.org user or
+# organization that owns the policy.
 
 on:
   workflow_dispatch:
@@ -17,7 +22,8 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: write # tag and GitHub release
+  id-token: write # OIDC token for NuGet Trusted Publishing
 
 concurrency:
   group: release
@@ -26,6 +32,8 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Protection rules (e.g. a required reviewer) are set on this environment in the repository settings.
+    environment: nuget
     env:
       VERSION: ${{ inputs.version }}
     steps:
@@ -59,13 +67,13 @@ jobs:
           "url=https://github.com/$($lock.repository)/tree/$($lock.commit)" >> $env:GITHUB_OUTPUT
 
       - name: Build
-        run: dotnet build XmlAuditfile.slnx -c Release -p:Version=$VERSION
+        run: dotnet build XmlAuditfile.slnx -c Release -p:Version="$VERSION"
 
       - name: Test
         run: dotnet test --solution XmlAuditfile.slnx -c Release --no-build
 
       - name: Pack
-        run: dotnet pack XmlAuditfile.slnx -c Release --no-build -p:Version=$VERSION -o artifacts
+        run: dotnet pack XmlAuditfile.slnx -c Release --no-build -p:Version="$VERSION" -o artifacts
 
       - name: Create GitHub release
         env:
@@ -76,7 +84,7 @@ jobs:
         run: |
           prerelease=""
           if [[ "$VERSION" == *-* ]]; then prerelease="--prerelease"; fi
-          gh release create "$VERSION" artifacts/*.nupkg \
+          gh release create "$VERSION" artifacts/*.nupkg artifacts/*.snupkg \
             --target "$GITHUB_SHA" \
             --title "$VERSION" \
             --notes "Built with auditfile-spec [$SPEC_LABEL]($SPEC_URL)." \
@@ -84,9 +92,17 @@ jobs:
             --latest="$LATEST" \
             $prerelease
 
-      # Last, because a NuGet version cannot be deleted.
+      # Last, because a NuGet version cannot be deleted (only unlisted).
+      - name: Log in to NuGet (Trusted Publishing)
+        id: nuget
+        if: vars.NUGET_USER != ''
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      # Pushes each .nupkg with the .snupkg next to it (symbols for the nuget.org symbol server).
       - name: Publish to NuGet
+        if: vars.NUGET_USER != ''
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        if: env.NUGET_API_KEY != ''
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
