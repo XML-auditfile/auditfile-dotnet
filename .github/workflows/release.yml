@@ -62,7 +62,7 @@ jobs:
         run: dotnet build XmlAuditfile.Auditfile.slnx -c Release -p:Version=$VERSION
 
       - name: Test
-        run: dotnet test XmlAuditfile.Auditfile.slnx -c Release --no-build
+        run: dotnet test --solution XmlAuditfile.Auditfile.slnx -c Release --no-build
 
       - name: Pack
         run: dotnet pack XmlAuditfile.Auditfile.slnx -c Release --no-build -p:Version=$VERSION -o artifacts

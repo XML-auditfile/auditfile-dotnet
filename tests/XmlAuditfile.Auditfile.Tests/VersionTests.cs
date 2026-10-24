@@ -19,7 +19,7 @@ public class VersionTests
     {
         var path = TestFiles.WithNamespace("urn:example:unknown");
 
-        var report = await Auditfile.ReadAsync(TestFiles.Source(path), new MemorySink(), new ReadOptions { Version = AuditfileVersion.Financial.V3_2 });
+        var report = await Auditfile.ReadAsync(TestFiles.Source(path), new MemorySink(), new ReadOptions { Version = AuditfileVersion.Financial.V3_2 }, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(report.Loaded);
         Assert.Equal(VersionSource.Forced, report.Schema!.Source);

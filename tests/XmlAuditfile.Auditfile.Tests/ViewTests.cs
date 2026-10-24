@@ -102,7 +102,7 @@ public class ViewTests
     {
         var sink = new MemorySink();
         var bytes = System.Text.Encoding.UTF8.GetBytes(xml);
-        var report = await Auditfile.ReadAsync(AuditfileSource.FromFactory(() => new MemoryStream(bytes), "views.xaf"), sink);
+        var report = await Auditfile.ReadAsync(AuditfileSource.FromFactory(() => new MemoryStream(bytes), "views.xaf"), sink, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(report.Loaded);
         return sink;
     }

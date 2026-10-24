@@ -26,4 +26,4 @@ jobs:
         run: dotnet build XmlAuditfile.Auditfile.slnx -c Release
 
       - name: Test
-        run: dotnet test XmlAuditfile.Auditfile.slnx -c Release --no-build
+        run: dotnet test --solution XmlAuditfile.Auditfile.slnx -c Release --no-build

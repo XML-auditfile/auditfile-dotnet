@@ -117,7 +117,7 @@ The spec is not committed. `spec.lock.json` pins a release (tag and commit) of
 ```
 pwsh tools/fetch-spec.ps1        # after cloning and whenever spec.lock.json changes
 dotnet build XmlAuditfile.Auditfile.slnx
-dotnet test  XmlAuditfile.Auditfile.slnx
+dotnet test --solution XmlAuditfile.Auditfile.slnx
 ```
 
 To build against a local spec checkout instead: `dotnet build -p:SpecRoot=../auditfile-spec/`.

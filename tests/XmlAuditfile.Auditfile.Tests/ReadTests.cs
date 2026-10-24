@@ -9,7 +9,7 @@ public class ReadTests
     public async Task ReadsTheSampleFile()
     {
         var sink = new MemorySink();
-        var report = await Auditfile.ReadAsync(TestFiles.Source(TestFiles.Sample), sink);
+        var report = await Auditfile.ReadAsync(TestFiles.Source(TestFiles.Sample), sink, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(report.Loaded);
         Assert.Equal(VersionSource.Official, report.Schema!.Source);
@@ -21,7 +21,7 @@ public class ReadTests
     [Fact]
     public async Task BusinessRulesFindTheUnbalancedTransactionInTheSampleFile()
     {
-        var report = await Auditfile.ValidateAsync(TestFiles.Source(TestFiles.Sample));
+        var report = await Auditfile.ValidateAsync(TestFiles.Source(TestFiles.Sample), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains(report.Diagnostics, d => d.Code == "XAF-R001");
         Assert.Contains(report.Diagnostics, d => d.Code == "XAF-R003");
@@ -32,7 +32,7 @@ public class ReadTests
     public async Task RowsKnowTheirParentAndOrder()
     {
         var sink = new MemorySink();
-        await Auditfile.ReadAsync(TestFiles.Source(TestFiles.Sample), sink);
+        await Auditfile.ReadAsync(TestFiles.Source(TestFiles.Sample), sink, cancellationToken: TestContext.Current.CancellationToken);
 
         var transaction = sink.Rows("transaction")[0];
         var line = sink.Rows("tr_line")[0];
@@ -51,10 +51,10 @@ public class ReadTests
 
         var whole = new MemorySink();
         var split = new MemorySink();
-        await Auditfile.ReadAsync(TestFiles.Source(TestFiles.Sample), whole);
+        await Auditfile.ReadAsync(TestFiles.Source(TestFiles.Sample), whole, cancellationToken: TestContext.Current.CancellationToken);
         var report = await Auditfile.ReadAsync(
             AuditfileSource.FromFactories(("split.xaf", () => new MemoryStream(first)), ("split-2.xaf", () => new MemoryStream(second))),
-            split);
+            split, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(2, report.Parts.Count);
         Assert.Equal(whole.Report!.RowCounts, report.RowCounts);
@@ -68,7 +68,7 @@ public class ReadTests
         using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(invalid));
         var sink = new MemorySink();
 
-        var report = await Auditfile.ReadAsync(AuditfileSource.FromStream(stream), sink);
+        var report = await Auditfile.ReadAsync(AuditfileSource.FromStream(stream), sink, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(sink.IsAborted);
         Assert.Contains(report.Diagnostics, d => d.Code == "XAF-S005");
@@ -80,7 +80,7 @@ public class ReadTests
     {
         var path = TestFiles.Write("extra.xaf", TestFiles.SampleText.Replace("<header>", "<header><vendorExtra>1</vendorExtra>", StringComparison.Ordinal));
 
-        var report = await Auditfile.ReadAsync(TestFiles.Source(path), new MemorySink(), new ReadOptions { Mode = ReadMode.Unverified });
+        var report = await Auditfile.ReadAsync(TestFiles.Source(path), new MemorySink(), new ReadOptions { Mode = ReadMode.Unverified }, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(report.Loaded);
         Assert.Contains(report.Diagnostics, d => d.Code == "XAF-S003" && d.Path == "auditfile/header/vendorExtra");
