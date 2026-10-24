@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml;
 using XmlAuditfile.Auditfile.Definitions;
 using XmlAuditfile.Auditfile.Diagnostics;
@@ -146,8 +147,7 @@ internal sealed class RowLoader
 
             if (table.IsValueTable)
             {
-                SetValue(frame, table.Table.Columns[0], _reader.ReadElementContentAsString(), path);
-                _readNext = false;
+                ReadValue(frame, table.Table.Columns[0], path);
                 Emit(frame);
                 return true;
             }
@@ -164,9 +164,7 @@ internal sealed class RowLoader
 
         if (_plan.Columns.TryGetValue(path, out var target) && Top is { } owner && owner.Plan == target.Table)
         {
-            var raw = _reader.ReadElementContentAsString();
-            _readNext = false;
-            SetValue(owner, target.Column, raw, path);
+            ReadValue(owner, target.Column, path);
             return true;
         }
 
@@ -216,6 +214,77 @@ internal sealed class RowLoader
 
         _reader.Skip();
         _readNext = false;
+    }
+
+    /// <summary>
+    /// Reads the text of the current element into a column, like ReadElementContentAsString, but keeps at most
+    /// <see cref="ReadOptions.MaxValueLength"/> characters: the rest of a longer value is only counted, and the value is
+    /// reported (XAF-S008) and left empty. Leaves the reader on the node after the end tag.
+    /// </summary>
+    private void ReadValue(Frame frame, SchemaColumn column, string path)
+    {
+        _readNext = false;
+        if (_reader.IsEmptyElement)
+        {
+            _reader.Read();
+            SetValue(frame, column, "", path);
+            return;
+        }
+
+        var max = _options.MaxValueLength;
+        var depth = _reader.Depth;
+        var text = new StringBuilder();
+        char[]? buffer = null;
+        long length = 0;
+        _reader.Read();
+        while (_reader.NodeType != XmlNodeType.EndElement || _reader.Depth != depth)
+        {
+            switch (_reader.NodeType)
+            {
+                case XmlNodeType.Text:
+                case XmlNodeType.CDATA:
+                case XmlNodeType.Whitespace:
+                case XmlNodeType.SignificantWhitespace:
+                    if (_reader.CanReadValueChunk)
+                    {
+                        buffer ??= new char[4096];
+                        int read;
+                        while ((read = _reader.ReadValueChunk(buffer, 0, buffer.Length)) > 0)
+                        {
+                            length += read;
+                            if (length <= max)
+                            {
+                                text.Append(buffer, 0, read);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var value = _reader.Value;
+                        length += value.Length;
+                        if (length <= max)
+                        {
+                            text.Append(value);
+                        }
+                    }
+
+                    break;
+                case XmlNodeType.Element:
+                    throw new XmlException($"Element '{_reader.LocalName}' is not allowed inside '{path}', which holds a value.", null, LineNumber, (_reader as IXmlLineInfo)?.LinePosition ?? 0);
+            }
+
+            _reader.Read();
+        }
+
+        _reader.Read();
+        if (length > max)
+        {
+            _diagnostics.Add("XAF-S008", Here(path),
+                ("table", frame.Plan.Table.Name), ("column", column.Name), ("length", length), ("max", max));
+            return;
+        }
+
+        SetValue(frame, column, text.ToString(), path);
     }
 
     private void ReadAttributes(string elementPath, Frame frame)

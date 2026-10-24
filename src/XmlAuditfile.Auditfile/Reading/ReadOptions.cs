@@ -45,6 +45,18 @@ public sealed class ReadOptions
     /// <summary>Maximum element nesting; deeper files are refused.</summary>
     public int MaxDepth { get; init; } = 64;
 
+    /// <summary>
+    /// Maximum number of characters in the whole document, all parts together; a larger file stops with XAF-X001.
+    /// Default 4 Gi characters. 0 means no limit.
+    /// </summary>
+    public long MaxCharactersInDocument { get; init; } = 4L * 1024 * 1024 * 1024;
+
+    /// <summary>
+    /// Maximum number of characters of one value. A longer value is skipped with XAF-S008 and never held in memory as a whole,
+    /// so one huge element cannot exhaust memory. The longest value an XSD of auditfile-spec allows is 999 characters.
+    /// </summary>
+    public int MaxValueLength { get; init; } = 65_536;
+
     /// <summary>Receives progress after every batch.</summary>
     public IProgress<ReadProgress>? Progress { get; init; }
 
@@ -59,6 +71,8 @@ public sealed class ReadOptions
         Language = Language,
         MaxDiagnostics = MaxDiagnostics,
         MaxDepth = MaxDepth,
+        MaxCharactersInDocument = MaxCharactersInDocument,
+        MaxValueLength = MaxValueLength,
         Progress = Progress,
     };
 }

@@ -372,7 +372,7 @@ internal sealed class ReadSession
         }
     }
 
-    internal static XmlReaderSettings BaseSettings(bool closeInput) => new()
+    private XmlReaderSettings BaseSettings(bool closeInput) => new()
     {
         DtdProcessing = DtdProcessing.Prohibit,
         XmlResolver = null,
@@ -380,6 +380,7 @@ internal sealed class ReadSession
         IgnoreProcessingInstructions = true,
         IgnoreWhitespace = true,
         CloseInput = closeInput,
+        MaxCharactersInDocument = _options.MaxCharactersInDocument,
     };
 
     internal static Location LocationOf(XmlReader reader, ConcatenatedStream concatenated)
