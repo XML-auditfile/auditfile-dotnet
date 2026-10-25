@@ -43,6 +43,12 @@ public enum ViewOperator
 
     /// <summary>"signed": the value, negated when <see cref="ViewValue.By"/> is one of <see cref="ViewValue.Codes"/>.</summary>
     Signed,
+
+    /// <summary>
+    /// "pseudonym": <see cref="ViewValue.Prefix"/>-n instead of the value, where n numbers the distinct values of the
+    /// column in the order they first occur in its table. Null and empty values stay as they are.
+    /// </summary>
+    Pseudonym,
 }
 
 #pragma warning restore CA1720
@@ -73,6 +79,7 @@ internal static class DefinitionNames
         "column" => ViewOperator.Column,
         "only" => ViewOperator.Only,
         "signed" => ViewOperator.Signed,
+        "pseudonym" => ViewOperator.Pseudonym,
         _ => throw new FormatException($"Embedded JSON: unknown view value operator '{value}'."),
     };
 }

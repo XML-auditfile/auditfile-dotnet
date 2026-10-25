@@ -85,10 +85,17 @@ public sealed class ViewJoin
         On = json.TryGetValue("on", out var on) && on is List<object?> pairs
             ? pairs.OfType<List<object?>>().Select(p => new ViewJoinCondition((string)p[0]!, (string)p[1]!)).ToList()
             : new List<ViewJoinCondition>();
+        Alternatives = json.Strings("alternatives").ToList();
     }
 
-    /// <summary>Table name.</summary>
+    /// <summary>Table name, as the view refers to it.</summary>
     public string Table { get; }
+
+    /// <summary>
+    /// Names of the same table in versions that call it differently: when a version lacks <see cref="Table"/>,
+    /// the first alternative it has is joined.
+    /// </summary>
+    public IReadOnlyList<string> Alternatives { get; }
 
     /// <summary>Equality conditions; empty means <see cref="Table"/> is an ancestor of the source.</summary>
     public IReadOnlyList<ViewJoinCondition> On { get; }
@@ -161,12 +168,13 @@ public sealed class ViewColumn
 /// <summary>How a view column gets its value from an input row.</summary>
 public sealed class ViewValue
 {
-    private ViewValue(ViewOperator op, string column, string? by, IReadOnlyList<string> codes)
+    private ViewValue(ViewOperator op, string column, string? by, IReadOnlyList<string> codes, string? prefix)
     {
         Operator = op;
         Column = column;
         By = by;
         Codes = codes;
+        Prefix = prefix;
     }
 
     /// <summary>How the value is taken from <see cref="Column"/>.</summary>
@@ -181,12 +189,15 @@ public sealed class ViewValue
     /// <summary>Codes for "only" (in) or "signed" (negative).</summary>
     public IReadOnlyList<string> Codes { get; }
 
+    /// <summary>Placeholder prefix for "pseudonym", e.g. "REL" for REL-1, REL-2, ...</summary>
+    public string? Prefix { get; }
+
     internal static ViewValue From(object? json) => json switch
     {
-        string column => new ViewValue(ViewOperator.Column, column, null, Array.Empty<string>()),
+        string column => new ViewValue(ViewOperator.Column, column, null, Array.Empty<string>(), null),
         JsonObject op => new ViewValue(
             DefinitionNames.ParseOperator(op.String("op")), op.String("value"), op.OptionalString("by"),
-            op.Strings("in").Concat(op.Strings("negative")).ToList()),
+            op.Strings("in").Concat(op.Strings("negative")).ToList(), op.OptionalString("prefix")),
         _ => throw new FormatException("Embedded JSON: invalid view column value."),
     };
 }
