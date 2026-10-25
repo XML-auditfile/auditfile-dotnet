@@ -2,7 +2,9 @@ name: auditfile-spec update
 
 # Weekly: looks for an auditfile-spec release higher than the one in spec.lock.json.
 # When found, updates the lock, builds and tests against it, and opens a pull request with the result.
-# Note: a pull request opened with GITHUB_TOKEN does not trigger CI, so the test result is in the PR body.
+# A pull request opened with GITHUB_TOKEN does not trigger CI by itself; this workflow starts CI on the branch
+# (workflow_dispatch is the one event GITHUB_TOKEN may trigger), so the required check runs. The test result is also
+# in the PR body.
 
 on:
   schedule:
@@ -10,6 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write # start CI on the new branch
   contents: write
   pull-requests: write
 
@@ -113,6 +116,7 @@ jobs:
             --body "Updates auditfile-spec from $FROM to [$TAG](https://github.com/$REPOSITORY/releases/tag/$TAG).
 
           $result"
+          gh workflow run ci.yml --ref "$BRANCH"
 
       - name: Fail when the new release breaks the build
         if: steps.test.outcome == 'failure'
