@@ -25,7 +25,14 @@ internal static class ViewRunner
         var slots = new List<string> { view.Source };
         slots.AddRange(view.Joins.Select(j => j.Table));
 
-        if (FindMissing(view, schema, slots) is { } missing)
+        // The table each slot reads: a join with alternatives may read a table of another name in this version.
+        var tables = new Dictionary<string, string>(StringComparer.Ordinal) { [view.Source] = view.Source };
+        foreach (var join in view.Joins)
+        {
+            tables[join.Table] = join.Alternatives.Prepend(join.Table).FirstOrDefault(t => schema.FindTable(t) is not null) ?? join.Table;
+        }
+
+        if (FindMissing(view, schema, slots, tables) is { } missing)
         {
             diagnostics.Add("XAF-Q001", Location.None, ("view", view.Name), ("standard", schema.VersionKey), ("missing", missing));
             return new ViewResult(view, false, Array.Empty<IReadOnlyList<object?>>(), diagnostics.Items);
@@ -34,12 +41,19 @@ internal static class ViewRunner
         Ref Resolve(string reference)
         {
             var (table, column) = Split(reference);
-            return new Ref(slots.IndexOf(table), schema.Table(table).FindColumn(column)!);
+            return new Ref(slots.IndexOf(table), schema.Table(tables[table]).FindColumn(column)!);
+        }
+
+        IEnumerable<object?> ColumnValues(string reference)
+        {
+            var (table, column) = Split(reference);
+            var index = schema.Table(tables[table]).FindColumn(column)!.Index;
+            return rows(tables[table]).Select(r => r.Values[index]);
         }
 
         var filters = BuildFilters(view, parameters, Resolve);
-        var columns = view.Columns.Select(c => new Output(c, c.Value is null ? null : new Expression(c.Value, Resolve))).ToList();
-        var joins = BuildJoins(view, schema, rows, Resolve, diagnostics);
+        var columns = view.Columns.Select(c => new Output(c, c.Value is null ? null : new Expression(c.Value, Resolve, ColumnValues))).ToList();
+        var joins = BuildJoins(view, schema, rows, tables, Resolve, diagnostics);
 
         var inputs = new List<AuditfileRow?[]>();
         foreach (var source in rows(view.Source))
@@ -79,11 +93,11 @@ internal static class ViewRunner
     }
 
     /// <summary>Returns the first table or "table.column" the view needs but the schema lacks, or null.</summary>
-    private static string? FindMissing(ViewDefinition view, AuditfileSchema schema, List<string> slots)
+    private static string? FindMissing(ViewDefinition view, AuditfileSchema schema, List<string> slots, Dictionary<string, string> tables)
     {
         foreach (var table in slots)
         {
-            if (schema.FindTable(table) is null)
+            if (schema.FindTable(tables[table]) is null)
             {
                 return table;
             }
@@ -91,7 +105,7 @@ internal static class ViewRunner
 
         foreach (var join in view.Joins.Where(j => j.On.Count == 0))
         {
-            if (AncestorPath(schema, view.Source, join.Table) is null)
+            if (AncestorPath(schema, view.Source, tables[join.Table]) is null)
             {
                 return join.Table;
             }
@@ -104,7 +118,7 @@ internal static class ViewRunner
         foreach (var reference in references)
         {
             var (table, column) = Split(reference);
-            if (!slots.Contains(table) || schema.FindTable(table)?.FindColumn(column) is null)
+            if (!slots.Contains(table) || schema.FindTable(tables[table])?.FindColumn(column) is null)
             {
                 return reference;
             }
@@ -159,10 +173,15 @@ internal static class ViewRunner
     }
 
     private static List<Func<AuditfileRow?[], AuditfileRow?>> BuildJoins(
-        ViewDefinition view, AuditfileSchema schema, Func<string, IEnumerable<AuditfileRow>> rows, Func<string, Ref> resolve, DiagnosticCollector diagnostics)
+        ViewDefinition view,
+        AuditfileSchema schema,
+        Func<string, IEnumerable<AuditfileRow>> rows,
+        Dictionary<string, string> tables,
+        Func<string, Ref> resolve,
+        DiagnosticCollector diagnostics)
     {
         // One index by id over every table between the source and its joined ancestors.
-        var ancestorTables = view.Joins.Where(j => j.On.Count == 0).SelectMany(j => AncestorPath(schema, view.Source, j.Table)!).Distinct().ToList();
+        var ancestorTables = view.Joins.Where(j => j.On.Count == 0).SelectMany(j => AncestorPath(schema, view.Source, tables[j.Table])!).Distinct().ToList();
         var byId = new Dictionary<long, AuditfileRow>();
         foreach (var row in ancestorTables.SelectMany(rows))
         {
@@ -172,13 +191,14 @@ internal static class ViewRunner
         var joins = new List<Func<AuditfileRow?[], AuditfileRow?>>();
         foreach (var join in view.Joins)
         {
+            var table = tables[join.Table];
             if (join.On.Count == 0)
             {
                 joins.Add(input =>
                 {
                     for (var id = input[0]!.ParentId; id is not null && byId.TryGetValue(id.Value, out var row); id = row.ParentId)
                     {
-                        if (row.Table.Name == join.Table)
+                        if (row.Table.Name == table)
                         {
                             return row;
                         }
@@ -192,7 +212,7 @@ internal static class ViewRunner
             var left = join.On.Select(c => resolve(c.Left)).ToList();
             var right = join.On.Select(c => resolve(c.Right)).ToList();
             var index = new Dictionary<string, AuditfileRow>(StringComparer.Ordinal);
-            foreach (var row in rows(join.Table))
+            foreach (var row in rows(table))
             {
                 var cells = new AuditfileRow?[right.Max(r => r.Slot) + 1];
                 cells[right[0].Slot] = row;
@@ -353,15 +373,25 @@ internal static class ViewRunner
         private readonly ViewValue _value;
         private readonly Ref _column;
         private readonly Ref? _by;
+        private readonly Dictionary<string, string>? _pseudonyms;
 
-        public Expression(ViewValue value, Func<string, Ref> resolve)
+        public Expression(ViewValue value, Func<string, Ref> resolve, Func<string, IEnumerable<object?>> columnValues)
         {
             _value = value;
             _column = resolve(value.Column);
             _by = value.By is null ? null : resolve(value.By);
+            if (value.Operator == ViewOperator.Pseudonym)
+            {
+                // Numbered over the whole table, so a placeholder does not depend on filters or on the view.
+                _pseudonyms = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var cell in columnValues(value.Column))
+                {
+                    Pseudonym(cell);
+                }
+            }
         }
 
-        public ColumnType Type => _column.Column.Type;
+        public ColumnType Type => _pseudonyms is null ? _column.Column.Type : ColumnType.String;
 
         public object? Evaluate(AuditfileRow?[] input)
         {
@@ -369,6 +399,11 @@ internal static class ViewRunner
             if (_value.Operator == ViewOperator.Column || cell is null)
             {
                 return cell;
+            }
+
+            if (_pseudonyms is not null)
+            {
+                return Pseudonym(cell);
             }
 
             var code = _by?.Get(input) is { } by ? ValueConverter.ToText(by) : null;
@@ -379,6 +414,22 @@ internal static class ViewRunner
             }
 
             return listed ? Negate(cell) : cell;
+        }
+
+        private object? Pseudonym(object? cell)
+        {
+            if (cell is null || ValueConverter.ToText(cell) is not { Length: > 0 } text)
+            {
+                return cell;
+            }
+
+            if (!_pseudonyms!.TryGetValue(text, out var pseudonym))
+            {
+                pseudonym = $"{_value.Prefix}-{(_pseudonyms.Count + 1).ToString(CultureInfo.InvariantCulture)}";
+                _pseudonyms[text] = pseudonym;
+            }
+
+            return pseudonym;
         }
 
         private static object Negate(object value) => value switch

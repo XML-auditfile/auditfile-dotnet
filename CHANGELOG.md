@@ -20,3 +20,5 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - XAF-S006 (missing required field) in unverified mode; XAF-X004 for a part of a split file in another encoding than the first part.
 - Native AOT compatible on net10.0; no package dependencies.
 - Views from auditfile-spec (`AuditfileVersion.Views`, `ViewDefinition.Run`, `MemorySink.Run`): trial balance, ledger entries and more, with parameters and diagnostics XAF-Q001/Q002.
+- Views: joins with `alternatives` (`ViewJoin.Alternatives`) and the `pseudonym` operation (`ViewOperator.Pseudonym`,
+  `ViewValue.Prefix`); the views `ledger` and `ledger_pseudonymized`.
