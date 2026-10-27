@@ -16,6 +16,18 @@ namespace XmlAuditfile;
 public static class Auditfile
 {
     /// <summary>
+    /// Dialects added at runtime, next to the built-in ones: <c>Auditfile.Dialects.Add(AuditfileVersion.Financial.V3_2, json)</c>.
+    /// Shared by every read in this process.
+    /// </summary>
+    public static DialectRegistry Dialects { get; } = new();
+
+    /// <summary>
+    /// Views added at runtime, next to the built-in ones: <c>Auditfile.Views.Add(json)</c>, then <see cref="AuditfileVersion.FindView"/>.
+    /// Shared by every read in this process.
+    /// </summary>
+    public static ViewRegistry Views { get; } = new();
+
+    /// <summary>
     /// Reads an audit file into a sink. Verified mode (default) validates against the XSD first and loads only a valid file.
     /// </summary>
     public static async Task<AuditfileReport> ReadAsync(AuditfileSource source, ISink sink, ReadOptions? options = null, CancellationToken cancellationToken = default)

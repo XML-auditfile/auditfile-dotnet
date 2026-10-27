@@ -68,6 +68,7 @@ Every call takes a `CancellationToken`, checked in the scan phase as well as the
 with an `ArgumentOutOfRangeException`. When a sink fails and its `AbortAsync` fails too, the read throws an
 `AggregateException` with both errors.
 | `AuditfileVersion.Financial.V3_2` | Manifest, XSD, definitions and dialects of a version |
+| `Auditfile.Dialects.Add(version, json)` / `Auditfile.Views.Add(json)` | Add your own dialects and views next to the built-in ones (see below) |
 | `AuditfileSchema.ToJson()` / `FromJson()` | Store and restore the schema of an import |
 
 Sources: the reader never opens files; you supply the streams.
@@ -83,6 +84,38 @@ Sources: the reader never opens files; you supply the streams.
 // Files on disk, e.g. audit.xaf and audit-2.xaf
 var source = AuditfileSource.FromFactories(paths.Select(p => (Path.GetFileName(p), (Func<Stream>)(() => File.OpenRead(p)))).ToArray());
 ```
+
+## Custom dialects and views
+
+Dialects and views come from auditfile-spec and are embedded in the package. You can add your own at runtime, in the same
+format as `dialects.json` and `views/<type>.json` of the spec, without a fork or a custom build. Pass the JSON text or
+a UTF-8 stream; the reader opens no files, so open them yourself.
+
+```csharp
+// { "formatVersion": 1, "dialects": [ { "name": "my-package", "match": { ... }, "corrections": [ ... ] } ] }
+Auditfile.Dialects.Add(AuditfileVersion.Financial.V3_2, File.ReadAllText("dialects.json"));
+
+// { "formatVersion": 1, "type": "xaf", "views": [ { "name": "lines_per_account", ... } ] }
+using (var views = File.OpenRead("views.json"))
+{
+    Auditfile.Views.Add(views);
+}
+
+var report = await Auditfile.ReadAsync(source, sink);      // recognizes and applies the added dialect
+var result = sink.Run(sink.Schema!.Version!.FindView("lines_per_account")!);
+```
+
+- Added definitions come after the built-in ones in `AuditfileVersion.Dialects` and `Views`, so `FindView`, version
+  resolution and dialect corrections use them like the built-in ones. A view is added for every version of its `type`;
+  whether it fits a version is decided when it runs (XAF-Q001), as for built-in views. `ApplyDialects = false` ignores
+  added dialects too.
+- A file is checked when it is added and refused as a whole when anything is wrong (`FormatException`): invalid JSON,
+  a `formatVersion` other than 1, an unknown dialect action, view aggregate or operator, or a correction `code` that is
+  not a dialect diagnostic (XAF-C001–C003). An unknown audit file type or a name the version or type already has throws
+  an `ArgumentException`. Built-in definitions cannot be replaced or removed.
+- `Auditfile.Dialects.Remove(version, name)` and `Auditfile.Views.Remove(type, name)` remove one added definition;
+  `Clear()` removes all of them. The registries are thread-safe and shared by every read in the process; a read that
+  has started keeps the dialects it found.
 
 ## Targets
 
