@@ -30,6 +30,10 @@ internal sealed class DiagnosticCollector(TextLanguage language, int maximum)
     /// <summary>Number of diagnostics per severity, including the ones left out.</summary>
     public IReadOnlyList<int> Counts => _counts;
 
+    /// <summary>The codes of layer "dialect", the only ones a dialect correction may report.</summary>
+    public static IEnumerable<string> DialectCodes =>
+        Catalog.Value.Values.Where(c => c.OptionalString("layer") == "dialect").Select(c => c.String("code"));
+
     public void Add(string code, Location location, params (string Name, object? Value)[] arguments)
     {
         if (!Catalog.Value.TryGetValue(code, out var entry))

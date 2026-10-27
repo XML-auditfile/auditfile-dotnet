@@ -82,11 +82,14 @@ public sealed partial class AuditfileVersion
     /// <summary>Definitions by key ("tr_line", "tr_line.amnt").</summary>
     public IReadOnlyDictionary<string, ElementDefinition> Definitions => _definitions.Value;
 
-    /// <summary>Known dialects of this version.</summary>
-    public IReadOnlyList<Dialect> Dialects => _dialects.Value;
+    /// <summary>Known dialects of this version: the built-in ones, then those added with <see cref="Auditfile.Dialects"/>.</summary>
+    public IReadOnlyList<Dialect> Dialects => Combine(_dialects.Value, Auditfile.Dialects.For(this));
 
-    /// <summary>Views of this audit file type, e.g. the trial balance. Shared by all versions of the type; see <see cref="ViewResult.IsAvailable"/>.</summary>
-    public IReadOnlyList<ViewDefinition> Views => _views.Value;
+    /// <summary>
+    /// Views of this audit file type, e.g. the trial balance: the built-in ones, then those added with <see cref="Auditfile.Views"/>.
+    /// Shared by all versions of the type; see <see cref="ViewResult.IsAvailable"/>.
+    /// </summary>
+    public IReadOnlyList<ViewDefinition> Views => Combine(_views.Value, Auditfile.Views.For(Type));
 
     /// <summary>Finds a view by name, or returns null.</summary>
     public ViewDefinition? FindView(string name) => Views.FirstOrDefault(v => v.Name == name);
@@ -134,6 +137,9 @@ public sealed partial class AuditfileVersion
     }
 
     internal static string Hex(byte[] bytes) => BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+
+    private static IReadOnlyList<T> Combine<T>(IReadOnlyList<T> builtIn, IReadOnlyList<T> custom) =>
+        custom.Count == 0 ? builtIn : [.. builtIn, .. custom];
 
     private JsonObject ReadJson(string file) =>
         MiniJson.Parse(EmbeddedResources.ReadText($"{Folder}/{file}")) as JsonObject

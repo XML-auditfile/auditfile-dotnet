@@ -7,6 +7,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Custom dialects and views at runtime, in the format of auditfile-spec: `Auditfile.Dialects.Add(version, json)` and
+  `Auditfile.Views.Add(json)` (text or stream), with `Remove` and `Clear` (`DialectRegistry`, `ViewRegistry`). They appear
+  after the built-in ones in `AuditfileVersion.Dialects`, `Views` and `FindView`.
 - Streaming reader for XAF 3.2: version resolution (forced, registry, alias, resolver), scan and load phases, XSD validation with the built-in XSD.
 - Table mapping from the generated manifest, typed values, ids, parents, ordinals and source parts.
 - Version constants for every registry entry: `Financial`, `CashRegister`, `TaxiOnboardComputer`, `TripRegistration`, `Payroll`.
