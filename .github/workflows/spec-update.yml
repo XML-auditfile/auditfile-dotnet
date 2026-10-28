@@ -1,6 +1,6 @@
 name: auditfile-spec update
 
-# Weekly: looks for an auditfile-spec release higher than the one in spec.lock.json.
+# Daily: looks for an auditfile-spec release higher than the one in spec.lock.json.
 # When found, updates the lock, builds and tests against it, and opens a pull request with the result.
 # A pull request opened with GITHUB_TOKEN does not trigger CI by itself; this workflow starts CI on the branch
 # (workflow_dispatch is the one event GITHUB_TOKEN may trigger), so the required check runs. The test result is also
@@ -8,7 +8,7 @@ name: auditfile-spec update
 
 on:
   schedule:
-    - cron: '0 6 * * 1' # Monday 06:00 UTC
+    - cron: '0 6 * * *' # every day 06:00 UTC
   workflow_dispatch:
 
 permissions:

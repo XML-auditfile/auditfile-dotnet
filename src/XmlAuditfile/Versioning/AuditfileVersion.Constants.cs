@@ -12,8 +12,14 @@ public sealed partial class AuditfileVersion
     /// <summary>Auditfile Financieel (XAF).</summary>
     public static class Financial
     {
+        /// <summary>XAF 3.1.</summary>
+        public static AuditfileVersion V3_1 => Parse("xaf/3.1");
+
         /// <summary>XAF 3.2 (2014, supplemented in 2017).</summary>
         public static AuditfileVersion V3_2 => Parse("xaf/3.2");
+
+        /// <summary>XAF 3.2.1. Its XSD has no keys or references, so XAF-R003 is not checked.</summary>
+        public static AuditfileVersion V3_2_1 => Parse("xaf/3.2.1");
 
         /// <summary>XAF 4.0.3.</summary>
         public static AuditfileVersion V4_0_3 => Parse("xaf/4.0.3");
