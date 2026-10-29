@@ -178,7 +178,7 @@ X005 (the XML parser reports an invalid character as X001) and E001–E004 (enve
 | `src/XmlAuditfile.Memory/` | `MemorySink` |
 | `tests/XmlAuditfile.Tests/` | Unit tests, using the XAF 3.2 sample in `Data/xaf-3.2-sample.xaf` (two intended findings: XAF-R001, XAF-R003) |
 | `spec.lock.json` | The pinned auditfile-spec release |
-| `tools/` | `fetch-spec.ps1` and the semver helpers used by the workflows |
+| `tools/` | `fetch-spec.ps1`, `generate-constants.ps1` (version constants from the registry) and the semver helpers used by the workflows |
 
 ## Definitions
 
@@ -198,13 +198,17 @@ dotnet test --solution XmlAuditfile.slnx
 
 To build against a local spec checkout instead: `dotnet build -p:SpecRoot=../auditfile-spec/`.
 
+The version constants (`AuditfileVersion.Financial.V3_2`, ...) are written from the registry of the pinned spec by
+`pwsh tools/generate-constants.ps1`; run it after `spec.lock.json` changes. CI checks that they match.
+`spec-update.yml` does both when auditfile-spec has a new release, and opens a pull request.
+
 ## Workflows
 
 | Workflow | What it does |
 | -------- | ------------ |
 | `ci.yml` | Push to main and pull requests: fetch the pinned spec, build, test |
 | `release.yml` | Manual, with a version such as `1.0.1`. From `main` the version must be higher than every release; from `release/X.Y` (maintenance of an older line, e.g. a security fix `0.1.1` after `1.0.0`, branched off tag `0.1.0`) it must be in line X.Y and higher than the latest release in that line. Then it fetches the pinned spec, builds, tests, packs, creates the tag and GitHub release, and publishes the packages and symbols to NuGet through Trusted Publishing when the `NUGET_USER` variable is set (environment `nuget`) |
-| `spec-update.yml` | Weekly: when auditfile-spec has a higher release than `spec.lock.json`, updates the lock, builds and tests, and opens a pull request with the result |
+| `spec-update.yml` | Daily: when auditfile-spec has a higher release than `spec.lock.json`, updates the lock and the version constants in one signed commit, builds and tests, and opens a pull request with the result |
 | `dependabot.yml` | Weekly updates of NuGet packages and GitHub Actions |
 
 ## License

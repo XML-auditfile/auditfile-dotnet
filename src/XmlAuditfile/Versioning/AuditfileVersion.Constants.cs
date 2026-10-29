@@ -7,6 +7,7 @@ namespace XmlAuditfile;
 #pragma warning disable CA1034
 
 // The version constants. A test checks that every registry entry has a constant here and vice versa.
+// Written by tools/generate-constants.ps1 from the registry; do not edit.
 public sealed partial class AuditfileVersion
 {
     /// <summary>Auditfile Financieel (XAF).</summary>
@@ -15,10 +16,10 @@ public sealed partial class AuditfileVersion
         /// <summary>XAF 3.1.</summary>
         public static AuditfileVersion V3_1 => Parse("xaf/3.1");
 
-        /// <summary>XAF 3.2 (2014, supplemented in 2017).</summary>
+        /// <summary>XAF 3.2 (published 2017-09-01).</summary>
         public static AuditfileVersion V3_2 => Parse("xaf/3.2");
 
-        /// <summary>XAF 3.2.1. Its XSD has no keys or references, so XAF-R003 is not checked.</summary>
+        /// <summary>XAF 3.2.1.</summary>
         public static AuditfileVersion V3_2_1 => Parse("xaf/3.2.1");
 
         /// <summary>XAF 4.0.3.</summary>
