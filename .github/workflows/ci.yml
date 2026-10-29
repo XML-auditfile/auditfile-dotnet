@@ -30,6 +30,11 @@ jobs:
         shell: pwsh
         run: ./tools/fetch-spec.ps1
 
+      # The constants are written from the registry (tools/generate-constants.ps1); they must match the locked spec.
+      - name: Check the version constants
+        shell: pwsh
+        run: ./tools/generate-constants.ps1 -Check
+
       - name: Build
         run: dotnet build XmlAuditfile.slnx -c Release
 
